@@ -3,7 +3,7 @@
 
 import boto3
 from botocore.exceptions import ClientError
-from resources.models import AMI
+from .resources.models import AMI
 
 
 class OrphanSnapshotCleaner:
@@ -82,7 +82,7 @@ class OrphanSnapshotCleaner:
         return count
 
     def log(self, msg):
-        print msg
+        print(msg)
 
 
 class AMICleaner:
@@ -109,7 +109,7 @@ class AMICleaner:
         amis = amis or []
         for ami in amis:
             self.ec2.deregister_image(ImageId=ami.id)
-            print "{0} deregistered".format(ami.id)
+            print("{0} deregistered".format(ami.id))
             for block_device in ami.block_device_mappings:
                 try:
                     self.ec2.delete_snapshot(
@@ -117,7 +117,7 @@ class AMICleaner:
                     )
                 except ClientError:
                     failed_snapshots.append(block_device.snapshot_id)
-                print "{0} deleted\n".format(block_device.snapshot_id)
+                print("{0} deleted\n".format(block_device.snapshot_id))
 
         return failed_snapshots
 

@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 
 import boto3
-from resources.models import AMI
+from .resources.models import AMI
 
 
 class Fetcher:

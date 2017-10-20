@@ -52,7 +52,7 @@ class AMI:
             AWSBlockDevice.object_with_json(block_device) for block_device
             in json.get('BlockDeviceMappings', [])
         ]
-        o.block_device_mappings = filter(None, ebs_snapshots)
+        o.block_device_mappings = [_f for _f in ebs_snapshots if _f]
 
         return o
 
