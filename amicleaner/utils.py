@@ -10,7 +10,6 @@ from prettytable import PrettyTable
 
 from .resources.config import KEEP_PREVIOUS, AMI_MIN_DAYS
 
-
 class Printer(object):
 
     """ Pretty table prints methods """
