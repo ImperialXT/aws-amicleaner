@@ -26,8 +26,7 @@ Prerequisites
 -------------
 
 -  `awscli <http://docs.aws.amazon.com/cli/latest/userguide/installing.html>`__
--  `python
-   2.7 <https://www.python.org/downloads/release/python-2710/>`__
+-  `python 2.7 or 3+`
 -  `python pip <https://pip.pypa.io/en/stable/installing/>`__
 
 This tool assumes your AWS credentials are in your environment, either with AWS
@@ -64,10 +63,12 @@ permissions in ``iam``:
                     "ec2:DeregisterImage",
                     "ec2:DescribeImages",
                     "ec2:DescribeInstances",
-                    "ec2:DescribeSnapshots"
+                    "ec2:DescribeSnapshots",
+                    "autoscaling:DescribeAutoScalingGroups",
+                    "autoscaling:DescribeLaunchConfigurations"
                 ],
                 "Resource": [
-                    "arn:aws:ec2:::*"
+                    "*"
                 ]
             }
         ]
@@ -127,6 +128,12 @@ Regroup by name or tags
 .. code:: bash
 
     amicleaner --mapping-key tags --mapping-values role env
+
+Exclude amis based on tag values
+
+.. code:: bash
+
+    amicleaner --mapping-key tags --mapping-values role env -excluded-mapping-values prod
 
 Skip confirmation, can be useful for automation
 

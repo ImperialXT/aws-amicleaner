@@ -4,7 +4,7 @@ from datetime import datetime
 from moto import mock_ec2
 
 from amicleaner.core import AMICleaner, OrphanSnapshotCleaner
-from amicleaner.resources.models import AMI, AWSTag
+from amicleaner.resources.models import AMI, AWSTag, AWSBlockDevice
 
 
 def test_map_candidates_with_null_arguments():
@@ -135,6 +135,51 @@ def test_map_with_tags():
     assert len(grouped_amis.get("prod.web-server")) == 2
 
 
+def test_map_with_tag_exclusions():
+    # tags
+    stack_tag = AWSTag()
+    stack_tag.key = "stack"
+    stack_tag.value = "web-server"
+
+    env_tag = AWSTag()
+    env_tag.key = "env"
+    env_tag.value = "prod"
+
+    # creating tests objects
+    # prod and web-server
+    first_ami = AMI()
+    first_ami.id = 'ami-28c2b348'
+    first_ami.name = "ubuntu-20160102"
+    first_ami.tags.append(stack_tag)
+    first_ami.tags.append(env_tag)
+    first_ami.creation_date = datetime.now()
+
+    # just prod
+    second_ami = AMI()
+    second_ami.id = 'ami-28c2b349'
+    second_ami.name = "ubuntu-20160103"
+    second_ami.tags.append(env_tag)
+    second_ami.creation_date = datetime.now()
+
+    # just web-server
+    third_ami = AMI()
+    third_ami.id = 'ami-28c2b350'
+    third_ami.name = "debian-20160104"
+    third_ami.tags.append(stack_tag)
+    third_ami.creation_date = datetime.now()
+
+    # creating amis to drop dict
+    candidates = [first_ami, second_ami, third_ami]
+
+    # grouping strategy
+    grouping_strategy = {"key": "tags", "values": ["stack", "env"], "excluded": ["prod"]}
+    grouped_amis = AMICleaner().map_candidates(candidates, grouping_strategy)
+    assert grouped_amis is not None
+    assert grouped_amis.get("prod") is None
+    assert grouped_amis.get("prod.web-server") is None
+    assert len(grouped_amis.get("web-server")) == 1
+
+
 def test_reduce_without_rotation_number():
     # creating tests objects
     first_ami = AMI()
@@ -156,6 +201,23 @@ def test_reduce_without_rotation_number():
 
     # creating amis to drop dict
     candidates = [second_ami, third_ami, first_ami]
+
+    assert AMICleaner().reduce_candidates(candidates) == candidates
+
+
+def test_reduce_without_snapshot_id():
+    # creating block device
+    first_block_device = AWSBlockDevice()
+    first_block_device.snapshot_id = None
+
+    # creating tests objects
+    first_ami = AMI()
+    first_ami.id = 'ami-28c2b348'
+    first_ami.name = "ubuntu-20160102"
+    first_ami.block_device_mappings.append(first_block_device)
+
+    # creating amis to drop dict
+    candidates = [first_ami]
 
     assert AMICleaner().reduce_candidates(candidates) == candidates
 

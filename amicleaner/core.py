@@ -1,17 +1,25 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
+from __future__ import print_function
+from __future__ import absolute_import
+from builtins import object
 import boto3
 from botocore.exceptions import ClientError
+from botocore.config import Config
+
+from .resources.config import BOTO3_RETRIES
 from .resources.models import AMI
 
+from datetime import datetime
 
-class OrphanSnapshotCleaner:
+
+class OrphanSnapshotCleaner(object):
 
     """ Finds and removes ebs snapshots left orphaned """
 
     def __init__(self, ec2=None):
-        self.ec2 = ec2 or boto3.client('ec2')
+        self.ec2 = ec2 or boto3.client('ec2', config=Config(retries={'max_attempts': BOTO3_RETRIES}))
 
     def get_snapshots_filter(self):
 
@@ -85,10 +93,10 @@ class OrphanSnapshotCleaner:
         print(msg)
 
 
-class AMICleaner:
+class AMICleaner(object):
 
     def __init__(self, ec2=None):
-        self.ec2 = ec2 or boto3.client('ec2')
+        self.ec2 = ec2 or boto3.client('ec2', config=Config(retries={'max_attempts': BOTO3_RETRIES}))
 
     @staticmethod
     def get_ami_sorting_key(ami):
@@ -111,13 +119,14 @@ class AMICleaner:
             self.ec2.deregister_image(ImageId=ami.id)
             print("{0} deregistered".format(ami.id))
             for block_device in ami.block_device_mappings:
-                try:
-                    self.ec2.delete_snapshot(
-                        SnapshotId=block_device.snapshot_id
-                    )
-                except ClientError:
-                    failed_snapshots.append(block_device.snapshot_id)
-                print("{0} deleted\n".format(block_device.snapshot_id))
+                if block_device.snapshot_id is not None:
+                    try:
+                            self.ec2.delete_snapshot(
+                                SnapshotId=block_device.snapshot_id
+                            )
+                    except ClientError:
+                        failed_snapshots.append(block_device.snapshot_id)
+                    print("{0} deleted\n".format(block_device.snapshot_id))
 
         return failed_snapshots
 
@@ -152,7 +161,7 @@ class AMICleaner:
         example :
         mapping_strategy = {"key": "name", "values": ["ubuntu", "debian"]}
         or
-        mapping_strategy = {"key": "tags", "values": ["env", "role"]}
+        mapping_strategy = {"key": "tags", "values": ["env", "role"], "excluded": ["master", "develop"]}
 
         print map_candidates(candidates_amis, mapping_strategy)
         ==>
@@ -193,9 +202,16 @@ class AMICleaner:
                     ami.tags,
                     mapping_strategy.get("values")
                 )
-                mapping_list = candidates_map.get(mapping_value) or []
-                mapping_list.append(ami)
-                candidates_map[mapping_value] = mapping_list
+                if mapping_strategy.get("excluded"):
+                    for excluded_mapping_value in mapping_strategy.get("excluded"):
+                        if excluded_mapping_value not in mapping_value:
+                            mapping_list = candidates_map.get(mapping_value) or []
+                            mapping_list.append(ami)
+                            candidates_map[mapping_value] = mapping_list
+                else:
+                    mapping_list = candidates_map.get(mapping_value) or []
+                    mapping_list.append(ami)
+                    candidates_map[mapping_value] = mapping_list
 
         return candidates_map
 
@@ -222,13 +238,26 @@ class AMICleaner:
 
         return ".".join(sorted(tag_values))
 
-    def reduce_candidates(self, mapped_candidates_ami, keep_previous=0):
+    def reduce_candidates(self, mapped_candidates_ami, keep_previous=0, ami_min_days=-1):
 
         """
         Given a array of AMIs to clean this function return a subsequent
         list by preserving a given number of them (history) based on creation
         time and rotation_strategy param
         """
+
+        result_amis = []
+        result_amis.extend(mapped_candidates_ami)
+
+        if ami_min_days > 0:
+            for ami in mapped_candidates_ami:
+                f_date = datetime.strptime(ami.creation_date, '%Y-%m-%dT%H:%M:%S.%fZ')
+                present = datetime.now()
+                delta = present - f_date
+                if delta.days < ami_min_days:
+                    result_amis.remove(ami)
+
+        mapped_candidates_ami = result_amis
 
         if not keep_previous:
             return mapped_candidates_ami

@@ -1,32 +1,39 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
+from __future__ import print_function
+from __future__ import absolute_import
+from builtins import input
+from builtins import object
 import sys
 
 from amicleaner import __version__
 from .core import AMICleaner, OrphanSnapshotCleaner
 from .fetch import Fetcher
-from .resources.config import MAPPING_KEY, MAPPING_VALUES
+from .resources.config import MAPPING_KEY, MAPPING_VALUES, EXCLUDED_MAPPING_VALUES
 from .resources.config import TERM
 from .utils import Printer, parse_args
 
 
-class App:
+class App(object):
 
     def __init__(self, args):
 
         self.version = args.version
         self.mapping_key = args.mapping_key or MAPPING_KEY
         self.mapping_values = args.mapping_values or MAPPING_VALUES
+        self.excluded_mapping_values = args.excluded_mapping_values or EXCLUDED_MAPPING_VALUES
         self.keep_previous = args.keep_previous
         self.check_orphans = args.check_orphans
         self.from_ids = args.from_ids
         self.full_report = args.full_report
         self.force_delete = args.force_delete
+        self.ami_min_days = args.ami_min_days
 
         self.mapping_strategy = {
             "key": self.mapping_key,
             "values": self.mapping_values,
+            "excluded": self.excluded_mapping_values,
         }
 
     def fetch_candidates(self, available_amis=None, excluded_amis=None):
@@ -80,7 +87,7 @@ class App:
             if not group_name:
                 report["no-tags (excluded)"] = amis
             else:
-                reduced = c.reduce_candidates(amis, self.keep_previous)
+                reduced = c.reduce_candidates(amis, self.keep_previous, self.ami_min_days)
                 if reduced:
                     report[group_name] = reduced
                     candidates.extend(reduced)
@@ -135,7 +142,9 @@ class App:
         print(TERM.bold("\nDefault values : ==>"))
         print(TERM.green("mapping_key : {0}".format(self.mapping_key)))
         print(TERM.green("mapping_values : {0}".format(self.mapping_values)))
+        print(TERM.green("excluded_mapping_values : {0}".format(self.excluded_mapping_values)))
         print(TERM.green("keep_previous : {0}".format(self.keep_previous)))
+        print(TERM.green("ami_min_days : {0}".format(self.ami_min_days)))
 
     @staticmethod
     def print_version():
