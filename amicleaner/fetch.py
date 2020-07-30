@@ -58,6 +58,39 @@ class Fetcher(object):
 
         return amis
 
+    def fetch_unattached_lt(self):
+
+        """
+        Find AMIS for launch templates unattached
+        to autoscaling group
+        """
+
+        resp = self.ec2.describe_launch_templates()
+        used_lt = (asg.get("LaunchTemplate", "")
+                   for asg in resp.get("AutoScalingGroups", []))
+
+        resp = self.ec2.describe_launch_templates()
+        all_lts = (lt.get("LaunchTemplateId", "")
+                   for lt in resp.get("LaunchTemplates", []))
+
+        unused_lts = list(set(all_lts) - set(used_lts))
+
+        # This is messy and there might be a better way to do it.
+        resp = []
+        for lt in unused_lts:
+            resp += [self.ec2.describe_launch_template_versions(
+                LaunchTemplateId=lt,
+                Versions=[
+                    "$Latest",
+                    "$Default"
+                    ]
+                )]
+
+        amis = [ltv.get("ImageId")
+                for ltv in resp.get("LaunchTemplateVersions", [])]
+
+        return amis
+
     def fetch_zeroed_asg(self):
 
         """
@@ -69,12 +102,31 @@ class Fetcher(object):
                       for asg in resp.get("AutoScalingGroups", [])
                       if asg.get("DesiredCapacity", 0) == 0]
 
+        zeroed_lts = [asg.get("LaunchTemplate", "")
+                      for asg in resp.get("AutoScalingGroups", [])
+                      if asg.get("DesiredCapacity", 0) == 0]
+
         resp = self.asg.describe_launch_configurations(
             LaunchConfigurationNames=zeroed_lcs
         )
 
         amis = [lc.get("ImageId", "")
                 for lc in resp.get("LaunchConfigurations", [])]
+
+        resp = []
+        for item in zeroed_lts:
+            resp += [self.ec2.describe_launch_template_versions(
+                        LaunchTemplateId=each.get('LaunchTemplateId'),
+                        Versions=[
+                            each.get('Version'),
+                            "$Latest",
+                            "$Default"
+                            ]
+                    )
+                ]
+
+        amis += [ltv.get("ImageId", "")
+                for ltv in resp.get("LaunchTemplateVersions", [])]
 
         return amis
 
