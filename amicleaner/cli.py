@@ -15,8 +15,7 @@ from .resources.config import TERM
 from .utils import Printer, parse_args
 
 
-class App(object):
-
+class App():
     def __init__(self, args):
 
         self.version = args.version
@@ -37,7 +36,6 @@ class App(object):
         }
 
     def fetch_candidates(self, available_amis=None, excluded_amis=None):
-
         """
         Collects created AMIs,
         AMIs from ec2 instances, launch configurations, autoscaling groups
@@ -54,14 +52,12 @@ class App(object):
             excluded_amis += f.fetch_zeroed_asg()
             excluded_amis += f.fetch_instances()
 
-        candidates = [v
-                      for k, v
-                      in available_amis.items()
-                      if k not in excluded_amis]
+        candidates = [
+            v for k, v in available_amis.items() if k not in excluded_amis
+        ]
         return candidates
 
     def prepare_candidates(self, candidates_amis=None):
-
         """ From an AMI list apply mapping strategy and filters """
 
         candidates_amis = candidates_amis or self.fetch_candidates()
@@ -88,7 +84,8 @@ class App(object):
             if not group_name:
                 report["no-tags (excluded)"] = amis
             else:
-                reduced = c.reduce_candidates(amis, self.keep_previous, self.ami_min_days)
+                reduced = c.reduce_candidates(amis, self.keep_previous,
+                                              self.ami_min_days)
                 if reduced:
                     report[group_name] = reduced
                     candidates.extend(reduced)
@@ -98,15 +95,14 @@ class App(object):
         return candidates
 
     def prepare_delete_amis(self, candidates, from_ids=False):
-
         """ Prepare deletion of candidates AMIs"""
 
         failed = []
 
         if from_ids:
-            print(TERM.bold("\nCleaning from {} AMI id(s) ...".format(
-                len(candidates))
-            ))
+            print(
+                TERM.bold("\nCleaning from {} AMI id(s) ...".format(
+                    len(candidates))))
             failed = AMICleaner().remove_amis_from_ids(candidates)
         else:
             print(TERM.bold("\nCleaning {} AMIs ...".format(len(candidates))))
@@ -117,7 +113,6 @@ class App(object):
             Printer.print_failed_snapshots(failed)
 
     def clean_orphans(self):
-
         """ Find and removes orphan snapshots """
 
         cleaner = OrphanSnapshotCleaner()
@@ -136,14 +131,17 @@ class App(object):
         if confirm:
             print("Removing orphan snapshots... ")
             count = cleaner.clean(snaps)
-            print("\n{0} orphan snapshots successfully removed !".format(count))
+            print(
+                "\n{0} orphan snapshots successfully removed !".format(count))
 
     def print_defaults(self):
 
         print(TERM.bold("\nDefault values : ==>"))
         print(TERM.green("mapping_key : {0}".format(self.mapping_key)))
         print(TERM.green("mapping_values : {0}".format(self.mapping_values)))
-        print(TERM.green("excluded_mapping_values : {0}".format(self.excluded_mapping_values)))
+        print(
+            TERM.green("excluded_mapping_values : {0}".format(
+                self.excluded_mapping_values)))
         print(TERM.green("keep_previous : {0}".format(self.keep_previous)))
         print(TERM.green("ami_min_days : {0}".format(self.ami_min_days)))
 
@@ -171,9 +169,8 @@ class App(object):
             delete = False
 
             if not self.force_delete:
-                answer = input(
-                    "Do you want to continue and remove {} AMIs "
-                    "[y/N] ? : ".format(len(candidates)))
+                answer = input("Do you want to continue and remove {} AMIs "
+                               "[y/N] ? : ".format(len(candidates)))
                 delete = (answer.lower() == "y")
             else:
                 delete = True

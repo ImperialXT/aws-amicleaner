@@ -1,12 +1,11 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-
 from builtins import str
 from builtins import object
 
 
-class AMI(object):
+class AMI():
     def __init__(self):
         self.id = None
         self.architecture = None
@@ -53,20 +52,19 @@ class AMI(object):
 
         o.tags = [AWSTag.object_with_json(tag) for tag in json.get('Tags', [])]
         ebs_snapshots = [
-            AWSBlockDevice.object_with_json(block_device) for block_device
-            in json.get('BlockDeviceMappings', [])
+            AWSBlockDevice.object_with_json(block_device)
+            for block_device in json.get('BlockDeviceMappings', [])
         ]
         o.block_device_mappings = [f for f in ebs_snapshots if f]
 
         return o
 
     def __repr__(self):
-        return '{0}: {1} {2}'.format(self.__class__.__name__,
-                                     self.id,
+        return '{0}: {1} {2}'.format(self.__class__.__name__, self.id,
                                      self.creation_date)
 
 
-class AWSEC2Instance(object):
+class AWSEC2Instance():
     def __init__(self):
         self.id = None
         self.name = None
@@ -114,7 +112,7 @@ class AWSEC2Instance(object):
         return o
 
 
-class AWSBlockDevice(object):
+class AWSBlockDevice():
     def __init__(self):
         self.device_name = None
         self.snapshot_id = None
@@ -150,7 +148,7 @@ class AWSBlockDevice(object):
         return o
 
 
-class AWSTag(object):
+class AWSTag():
     def __init__(self):
         self.key = None
         self.value = None

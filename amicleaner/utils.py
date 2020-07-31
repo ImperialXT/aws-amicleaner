@@ -11,13 +11,10 @@ from prettytable import PrettyTable
 from .resources.config import KEEP_PREVIOUS, AMI_MIN_DAYS
 
 
-class Printer(object):
-
+class Printer():
     """ Pretty table prints methods """
-
     @staticmethod
     def print_report(candidates, full_report=False):
-
         """ Print AMI collection results """
 
         if not candidates:
@@ -27,12 +24,15 @@ class Printer(object):
 
         for group_name, amis in candidates.items():
             groups_table.add_row([group_name, len(amis)])
-            eligible_amis_table = PrettyTable(["AMI ID", "AMI Name", "Creation Date"])
+            eligible_amis_table = PrettyTable(
+                ["AMI ID", "AMI Name", "Creation Date"])
             for ami in amis:
-                eligible_amis_table.add_row([ami.id, ami.name, ami.creation_date])
+                eligible_amis_table.add_row(
+                    [ami.id, ami.name, ami.creation_date])
             if full_report:
                 print(group_name)
-                print(eligible_amis_table.get_string(sortby="AMI Name"), "\n\n")
+                print(eligible_amis_table.get_string(sortby="AMI Name"),
+                      "\n\n")
 
         print("\nAMIs to be removed:")
         print(groups_table.get_string(sortby="Group name"))
@@ -57,11 +57,9 @@ class Printer(object):
 
 
 def parse_args(args):
-    parser = argparse.ArgumentParser(
-        description="Clean your AMIs on your "
-        "AWS account. Your AWS "
-        "credentials must be sourced"
-    )
+    parser = argparse.ArgumentParser(description="Clean your AMIs on your "
+                                     "AWS account. Your AWS "
+                                     "credentials must be sourced")
 
     parser.add_argument(
         "-v",
@@ -85,9 +83,9 @@ def parse_args(args):
         help="Prints a full report of what to be cleaned",
     )
 
-    parser.add_argument(
-        "--mapping-key", dest="mapping_key", help="How to regroup AMIs : [name|tags]"
-    )
+    parser.add_argument("--mapping-key",
+                        dest="mapping_key",
+                        help="How to regroup AMIs : [name|tags]")
 
     parser.add_argument(
         "--mapping-values",
@@ -132,7 +130,8 @@ def parse_args(args):
         dest="ami_min_days",
         type=int,
         default=AMI_MIN_DAYS,
-        help="Number of days AMI to keep excluding those " "currently being running",
+        help="Number of days AMI to keep excluding those "
+        "currently being running",
     )
 
     parsed_args = parser.parse_args(args)
